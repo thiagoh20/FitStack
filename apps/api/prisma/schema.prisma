@@ -1,0 +1,212 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  TRAINER
+  CLIENT
+}
+
+enum ClientStatus {
+  ACTIVE
+  PAUSED
+  ARCHIVED
+}
+
+enum ProgramStatus {
+  DRAFT
+  ACTIVE
+  ARCHIVED
+}
+
+enum AssignmentStatus {
+  ACTIVE
+  COMPLETED
+  CANCELLED
+}
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String
+  role         Role
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  trainerProfile TrainerProfile?
+  clientProfile  ClientProfile?
+  refreshTokens  RefreshToken[]
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model TrainerProfile {
+  id          String   @id @default(uuid())
+  userId      String   @unique
+  displayName String
+  specialty   String?
+  bio         String?
+  timezone    String   @default("America/Bogota")
+  unitSystem  String   @default("metric")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  clients   ClientProfile[]
+  exercises Exercise[]
+  programs  Program[]
+}
+
+model ClientProfile {
+  id             String       @id @default(uuid())
+  trainerId      String
+  userId         String?      @unique
+  fullName       String
+  email          String?
+  phone          String?
+  goals          String?
+  injuries       String?
+  notes          String?
+  birthDate      DateTime?
+  sex            String?
+  status         ClientStatus @default(ACTIVE)
+  inviteAccepted Boolean      @default(false)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  trainer        TrainerProfile     @relation(fields: [trainerId], references: [id], onDelete: Cascade)
+  user           User?              @relation(fields: [userId], references: [id], onDelete: SetNull)
+  assignments    ClientProgram[]
+  sessionLogs    SessionLog[]
+  progressEntries ProgressEntry[]
+
+  @@index([trainerId])
+  @@index([email])
+}
+
+model Exercise {
+  id          String   @id @default(uuid())
+  trainerId   String
+  name        String
+  muscleGroup String?
+  equipment   String?
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  trainer          TrainerProfile    @relation(fields: [trainerId], references: [id], onDelete: Cascade)
+  workoutExercises WorkoutExercise[]
+
+  @@index([trainerId])
+}
+
+model Program {
+  id            String        @id @default(uuid())
+  trainerId     String
+  name          String
+  description   String?
+  durationWeeks Int           @default(4)
+  status        ProgramStatus @default(DRAFT)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  trainer     TrainerProfile  @relation(fields: [trainerId], references: [id], onDelete: Cascade)
+  workouts    Workout[]
+  assignments ClientProgram[]
+
+  @@index([trainerId])
+}
+
+model Workout {
+  id         String   @id @default(uuid())
+  programId  String
+  dayIndex   Int
+  name       String
+  notes      String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  program   Program           @relation(fields: [programId], references: [id], onDelete: Cascade)
+  exercises WorkoutExercise[]
+  logs      SessionLog[]
+
+  @@index([programId])
+  @@unique([programId, dayIndex])
+}
+
+model WorkoutExercise {
+  id         String  @id @default(uuid())
+  workoutId  String
+  exerciseId String
+  sets       Int
+  reps       String
+  restSec    Int?
+  notes      String?
+  sortOrder  Int     @default(0)
+
+  workout  Workout  @relation(fields: [workoutId], references: [id], onDelete: Cascade)
+  exercise Exercise @relation(fields: [exerciseId], references: [id], onDelete: Restrict)
+
+  @@index([workoutId])
+}
+
+model ClientProgram {
+  id        String           @id @default(uuid())
+  clientId  String
+  programId String
+  startDate DateTime
+  status    AssignmentStatus @default(ACTIVE)
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  client  ClientProfile @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  program Program       @relation(fields: [programId], references: [id], onDelete: Cascade)
+
+  @@index([clientId])
+  @@index([programId])
+}
+
+model SessionLog {
+  id          String   @id @default(uuid())
+  clientId    String
+  workoutId   String
+  performedAt DateTime @default(now())
+  rpe         Int?
+  notes       String?
+  createdAt   DateTime @default(now())
+
+  client  ClientProfile @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  workout Workout       @relation(fields: [workoutId], references: [id], onDelete: Cascade)
+
+  @@index([clientId])
+  @@index([workoutId])
+}
+
+model ProgressEntry {
+  id            String   @id @default(uuid())
+  clientId      String
+  recordedAt    DateTime @default(now())
+  weightKg      Float?
+  bodyFatPct    Float?
+  measurements  Json?
+  notes         String?
+  createdAt     DateTime @default(now())
+
+  client ClientProfile @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@index([clientId])
+}
