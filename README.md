@@ -1,13 +1,5 @@
 # FitStack
 
-<<<<<<< HEAD
-Lo estas haciendo muy bien :)
-
-estas en la rama de develop (desarrollo)
-
-
-que bien, ya te voy a subir el proyecto para que lo ejecutes
-=======
 Plataforma DDD para entrenadores personales: un entrenador gestiona muchos clientes y ambos tienen app (Vue 3).
 
 ## Stack
@@ -65,4 +57,3 @@ Flujo cliente: el entrenador crea un cliente → copia el ID → el cliente acti
 - `clients` — perfiles de cliente ligados a un entrenador
 - `training` — ejercicios, programas, asignaciones
 - `progress` — logs de sesión y entradas de progreso
->>>>>>> 9d4e233 (Add proyect)
